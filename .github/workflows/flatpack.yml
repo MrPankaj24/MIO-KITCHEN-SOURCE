@@ -100,7 +100,13 @@ jobs:
                   done
 
                   cd "$WORKSPACE"
-                  exec /app/env/bin/python "$WORKSPACE/tool.py" "$@"
+                  
+                  # Trap signals so when Hyprland/Flatpak kills the session, Python exits cleanly
+                  trap 'kill 0' EXIT TERM INT
+                  
+                  /app/env/bin/python "$WORKSPACE/tool.py" "$@" &
+                  child=$!
+                  wait "$child"
                   SCRIPT_EOF
                 - chmod +x /app/bin/start-mio
               sources:
