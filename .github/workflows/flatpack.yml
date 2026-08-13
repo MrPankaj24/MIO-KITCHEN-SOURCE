@@ -32,7 +32,7 @@ jobs:
             - --socket=wayland
             - --filesystem=host
           modules:
-            # 1. Compile the native LZO library from source first (Fixes missing lzo1.h)
+            # 1. Compile the native LZO library from source first
             - name: lzo
               buildsystem: autotools
               config-opts:
@@ -47,13 +47,13 @@ jobs:
               buildsystem: simple
               build-options:
                 build-args:
-                  # Allow network access so pip can download pre-compiled packages
                   - --share=network
+                env:
+                  # Tell pip/gcc where to find the LZO library we just compiled!
+                  C_INCLUDE_PATH: /app/include
+                  LIBRARY_PATH: /app/lib
               build-commands:
-                # Install Python requirements natively using pip
                 - pip3 install --prefix=/app -r requirements.txt --break-system-packages
-                
-                # Move app files and create the startup script
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
                 - echo '#!/bin/sh' > /app/bin/start-mio
@@ -66,13 +66,13 @@ jobs:
 
       - name: Build and Export Flatpak
         run: |
-          # 1. Add Flathub to the USER space to avoid system permission errors
+          # 1. Add Flathub to the USER space
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 2. Build the Flatpak using --user
+          # 2. Build the Flatpak
           flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo builddir com.github.ColdWindScholar.MioKitchen.yml
           
-          # 3. Bundle it into a single installable file
+          # 3. Bundle it into an installable file
           flatpak build-bundle repo mio-kitchen.flatpak com.github.ColdWindScholar.MioKitchen --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Upload Artifact
