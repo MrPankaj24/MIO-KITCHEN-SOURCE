@@ -21,12 +21,13 @@ jobs:
       - name: Resize App Icon to 256x256
         run: |
           if [ -f splash.png ]; then
-            convert splash.png -resize 256x256 splash.png
-            echo "Icon resized to 256x256"
+            # Resize to 256 height/width, then pad with transparency to make it a perfect 256x256 square
+            convert splash.png -resize 256x256 -gravity center -background transparent -extent 256x256 splash.png
+            echo "Icon resized and padded to 256x256"
           else
             echo "WARNING: splash.png not found, icon will be missing"
           fi
-
+      
       - name: Create Flatpak Manifest
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
