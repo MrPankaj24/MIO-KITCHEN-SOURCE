@@ -60,9 +60,15 @@ jobs:
                   C_INCLUDE_PATH: /app/include
                   LIBRARY_PATH: /app/lib
                   LD_RUN_PATH: /app/lib
+                  PYTHONPATH: /app/lib/python3.12/site-packages
               build-commands:
-                # Install packages to user space inside sandbox
-                - pip3 install --user -r requirements.txt --break-system-packages
+                # Install directly to /app prefix so it gets packaged correctly
+                - pip3 install --prefix=/app -r requirements.txt --break-system-packages
+                
+                # Debug check: list what modules got installed
+                - python3 -c "import sys; print(sys.path)"
+                - python3 -c "import pkg_resources; print([p.project_name for p in pkg_resources.working_set])" || true
+
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
                 - mkdir -p /app/share/applications
@@ -82,9 +88,8 @@ jobs:
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
                   #!/bin/sh
-                  export LD_LIBRARY_PATH=/app/lib
-                  # Point directly to user site-packages where pip installed everything
-                  export PYTHONPATH="$HOME/.local/lib/python3.12/site-packages:$PYTHONPATH"
+                  export PYTHONPATH=/app/lib/python3.12/site-packages:$PYTHONPATH
+                  export LD_LIBRARY_PATH=/app/lib:$LD_LIBRARY_PATH
 
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
