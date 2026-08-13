@@ -17,12 +17,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
-
-      - name: Generate Python Requirements
-        run: |
-          pip install requirements-parser aiohttp toml
-          wget https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py
-          python3 flatpak-pip-generator.py --requirements-file=requirements.txt
           
       - name: Create Flatpak Manifest
         run: |
@@ -38,10 +32,17 @@ jobs:
             - --socket=wayland
             - --filesystem=host
           modules:
-            - python3-requirements.json
             - name: mio-kitchen
               buildsystem: simple
+              build-options:
+                build-args:
+                  # Allow network access so pip can download pre-compiled packages
+                  - --share=network
               build-commands:
+                # Install Python requirements natively using pip
+                - pip3 install --prefix=/app -r requirements.txt --break-system-packages
+                
+                # Move app files and create the startup script
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
                 - echo '#!/bin/sh' > /app/bin/start-mio
@@ -51,13 +52,13 @@ jobs:
                 - type: dir
                   path: .
           EOF
-          
+
       - name: Build and Export Flatpak
         run: |
           # 1. Add Flathub to the USER space to avoid system permission errors
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # 2. Build the Flatpak using --user to avoid Polkit/DBus restrictions
+          # 2. Build the Flatpak using --user
           flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo builddir com.github.ColdWindScholar.MioKitchen.yml
           
           # 3. Bundle it into a single installable file
