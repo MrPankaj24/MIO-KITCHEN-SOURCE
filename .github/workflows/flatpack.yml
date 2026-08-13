@@ -16,10 +16,9 @@ jobs:
       - name: Generate Python Requirements
         run: |
           pip install requirements-parser aiohttp toml
-          wget https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator
-          chmod +x flatpak-pip-generator
-          ./flatpak-pip-generator --requirements-file=requirements.txt
-
+          wget https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator.py
+          python3 flatpak-pip-generator.py --requirements-file=requirements.txt
+          
       - name: Create Flatpak Manifest
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
