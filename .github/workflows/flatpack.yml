@@ -34,7 +34,7 @@ jobs:
           runtime: org.freedesktop.Platform
           runtime-version: '24.08'
           sdk: org.freedesktop.Sdk
-          command: tool.py
+          command: start-mio
           finish-args:
             - --share=ipc
             - --socket=fallback-x11
@@ -71,13 +71,33 @@ jobs:
                   Type=Application
                   Name=MIO Kitchen
                   Comment=Android ROM Tool in Python
-                  Exec=tool.py
+                  Exec=start-mio
                   Icon=com.github.ColdWindScholar.MioKitchen
                   Categories=Development;Utility;
                   Terminal=false
                   DESKTOP_EOF
                 - mkdir -p /app/share/icons/hicolor/256x256/apps
                 - cp /app/bin/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
+                - |
+                  cat << 'SCRIPT_EOF' > /app/bin/start-mio
+                  #!/bin/sh
+                  export PYTHONPATH=/app/lib/python3.12/site-packages
+                  export LD_LIBRARY_PATH=/app/lib
+
+                  WORKSPACE="$HOME/MIO_Workspace"
+                  mkdir -p "$WORKSPACE"
+
+                  # If configs.json doesn't exist in the writable workspace, initialize it
+                  if [ ! -f "$WORKSPACE/bin/configs.json" ] && [ -f "/app/bin/bin/configs.json" ]; then
+                    mkdir -p "$WORKSPACE/bin"
+                    cp "/app/bin/bin/configs.json" "$WORKSPACE/bin/configs.json"
+                  fi
+
+                  # Change to the writable workspace and run tool.py from /app/bin
+                  cd "$WORKSPACE"
+                  exec python3 /app/bin/tool.py "$@"
+                  SCRIPT_EOF
+                - chmod +x /app/bin/start-mio
               sources:
                 - type: dir
                   path: .
