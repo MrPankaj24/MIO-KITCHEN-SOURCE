@@ -31,13 +31,13 @@ jobs:
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
           app-id: com.github.ColdWindScholar.MioKitchen
-          runtime: org.freedesktop.Sdk
+          runtime: org.freedesktop.Platform
           runtime-version: '24.08'
           sdk: org.freedesktop.Sdk
           command: start-mio
           finish-args:
             - --share=ipc
-            - --socket=x11
+            - --socket=fallback-x11
             - --socket=wayland
             - --filesystem=host
           modules:
@@ -85,7 +85,7 @@ jobs:
                   export LD_LIBRARY_PATH=/app/lib
 
                   WORKSPACE="$HOME/Desktop/MIO"
-                  )                 mkdir -p "$WORKSPACE"
+                  mkdir -p "$WORKSPACE"
 
                   # Sync app files to writable workspace, but preserve user configs
                   for f in /app/bin/*; do
