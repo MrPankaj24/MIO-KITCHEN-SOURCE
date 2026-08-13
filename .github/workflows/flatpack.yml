@@ -3,12 +3,12 @@ name: Build Flatpak
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows you to trigger it manually
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,8 +16,17 @@ jobs:
       - name: Install Flatpak Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
+
+      - name: Resize App Icon to 256x256
+        run: |
+          if [ -f splash.png ]; then
+            convert splash.png -resize 256x256 splash.png
+            echo "Icon resized to 256x256"
+          else
+            echo "WARNING: splash.png not found, icon will be missing"
+          fi
+
       - name: Create Flatpak Manifest
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
@@ -32,7 +41,6 @@ jobs:
             - --socket=wayland
             - --filesystem=host
           modules:
-            # 1. Compile native LZO library with explicit prefix configuration
             - name: lzo
               buildsystem: autotools
               config-opts:
@@ -43,7 +51,6 @@ jobs:
                   url: https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
                   sha256: c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072
 
-            # 2. Build MIO Kitchen with Desktop Entry and Smart Paths
             - name: mio-kitchen
               buildsystem: simple
               build-options:
@@ -54,14 +61,9 @@ jobs:
                   LIBRARY_PATH: /app/lib
                   LD_RUN_PATH: /app/lib
               build-commands:
-                # Install Python requirements
                 - pip3 install --prefix=/app -r requirements.txt --break-system-packages
-                
-                # Copy application files
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
-                
-                # Create .desktop file for app launcher / desktop integration
                 - mkdir -p /app/share/applications
                 - |
                   cat << 'DESKTOP_EOF' > /app/share/applications/com.github.ColdWindScholar.MioKitchen.desktop
@@ -74,16 +76,11 @@ jobs:
                   Categories=Development;Utility;
                   Terminal=false
                   DESKTOP_EOF
-
-                # Install App Icon
                 - mkdir -p /app/share/icons/hicolor/256x256/apps
                 - cp /app/bin/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
-
-                # Smart startup script: Launches inside ~/MIO_Workspace to ensure writable paths
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
                   #!/bin/sh
-                  # Create and switch to writable workspace directory in user's home folder
                   mkdir -p "$HOME/MIO_Workspace"
                   cd "$HOME/MIO_Workspace"
                   exec python3 /app/bin/tool.py "$@"
