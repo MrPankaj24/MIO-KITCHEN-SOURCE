@@ -1,0 +1,62 @@
+name: Build Flatpak
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows you to trigger it manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Generate Python Requirements
+        run: |
+          pip install requirements-parser aiohttp toml
+          wget https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/pip/flatpak-pip-generator
+          chmod +x flatpak-pip-generator
+          ./flatpak-pip-generator --requirements-file=requirements.txt
+
+      - name: Create Flatpak Manifest
+        run: |
+          cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
+          app-id: com.github.ColdWindScholar.MioKitchen
+          runtime: org.freedesktop.Platform
+          runtime-version: '23.08'
+          sdk: org.freedesktop.Sdk
+          command: start-mio
+          finish-args:
+            - --share=ipc
+            - --socket=fallback-x11
+            - --socket=wayland
+            - --filesystem=host
+          modules:
+            - python3-requirements.json
+            - name: mio-kitchen
+              buildsystem: simple
+              build-commands:
+                - mkdir -p /app/bin
+                - cp -r * /app/bin/
+                - echo '#!/bin/sh' > /app/bin/start-mio
+                - echo 'python3 /app/bin/tool.py "$@"' >> /app/bin/start-mio
+                - chmod +x /app/bin/start-mio
+              sources:
+                - type: dir
+                  path: .
+          EOF
+
+      - name: Build and Export Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: mio-kitchen.flatpak
+          manifest-path: com.github.ColdWindScholar.MioKitchen.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mio-kitchen-bundle
+          path: mio-kitchen.flatpak
