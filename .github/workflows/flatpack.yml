@@ -21,7 +21,6 @@ jobs:
       - name: Resize App Icon to 256x256
         run: |
           if [ -f splash.png ]; then
-            # Resize to 256 height/width, then pad with transparency to make it a perfect 256x256 square
             convert splash.png -resize 256x256 -gravity center -background transparent -extent 256x256 splash.png
             echo "Icon resized and padded to 256x256"
           else
@@ -32,7 +31,7 @@ jobs:
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
           app-id: com.github.ColdWindScholar.MioKitchen
-          runtime: org.freedesktop.Platform
+          runtime: org.freedesktop.Sdk
           runtime-version: '24.08'
           sdk: org.freedesktop.Sdk
           command: start-mio
@@ -82,8 +81,13 @@ jobs:
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
                   #!/bin/sh
-                  mkdir -p "$HOME/MIO_Workspace"
-                  cd "$HOME/MIO_Workspace"
+                  # Tell Python where to find the pip-installed packages
+                  export PYTHONPATH=/app/lib/python3.12/site-packages
+                  # Tell the system where to find bundled C libraries (like LZO)
+                  export LD_LIBRARY_PATH=/app/lib
+                  # Create and switch to writable workspace directory on the Desktop
+                  mkdir -p "$HOME/Desktop/MIO"
+                  cd "$HOME/Desktop/MIO"
                   exec python3 /app/bin/tool.py "$@"
                   SCRIPT_EOF
                 - chmod +x /app/bin/start-mio
