@@ -87,15 +87,12 @@ jobs:
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
 
-                  # If configs.json doesn't exist in the writable workspace, initialize it
-                  if [ ! -f "$WORKSPACE/bin/configs.json" ] && [ -f "/app/bin/bin/configs.json" ]; then
-                    mkdir -p "$WORKSPACE/bin"
-                    cp "/app/bin/bin/configs.json" "$WORKSPACE/bin/configs.json"
-                  fi
+                  # Copy app files into the writable workspace while preserving existing user files/configs
+                  cp -rn /app/bin/* "$WORKSPACE/" 2>/dev/null || true
 
-                  # Change to the writable workspace and run tool.py from /app/bin
+                  # Change to the writable workspace and run tool.py locally
                   cd "$WORKSPACE"
-                  exec python3 /app/bin/tool.py "$@"
+                  exec python3 "$WORKSPACE/tool.py" "$@"
                   SCRIPT_EOF
                 - chmod +x /app/bin/start-mio
               sources:
