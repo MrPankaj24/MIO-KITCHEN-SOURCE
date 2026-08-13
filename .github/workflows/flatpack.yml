@@ -32,11 +32,12 @@ jobs:
             - --socket=wayland
             - --filesystem=host
           modules:
-            # 1. Compile native LZO library
+            # 1. Compile native LZO library with explicit prefix configuration
             - name: lzo
               buildsystem: autotools
               config-opts:
                 - --enable-shared
+                - --prefix=/app
               sources:
                 - type: archive
                   url: https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
@@ -51,6 +52,7 @@ jobs:
                 env:
                   C_INCLUDE_PATH: /app/include
                   LIBRARY_PATH: /app/lib
+                  LD_RUN_PATH: /app/lib
               build-commands:
                 # Install Python requirements
                 - pip3 install --prefix=/app -r requirements.txt --break-system-packages
