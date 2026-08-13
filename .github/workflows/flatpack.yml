@@ -29,7 +29,7 @@ jobs:
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
           app-id: com.github.ColdWindScholar.MioKitchen
           runtime: org.freedesktop.Platform
-          runtime-version: '23.08'
+          runtime-version: '24.08'
           sdk: org.freedesktop.Sdk
           command: start-mio
           finish-args:
@@ -51,7 +51,7 @@ jobs:
                 - type: dir
                   path: .
           EOF
-
+          
       - name: Build and Export Flatpak
         run: |
           # 1. Add Flathub to the USER space to avoid system permission errors
