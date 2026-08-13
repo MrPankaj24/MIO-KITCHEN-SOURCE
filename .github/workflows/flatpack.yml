@@ -32,7 +32,7 @@ jobs:
             - --socket=wayland
             - --filesystem=host
           modules:
-            # 1. Compile the native LZO library from source first
+            # 1. Compile native LZO library
             - name: lzo
               buildsystem: autotools
               config-opts:
@@ -42,22 +42,50 @@ jobs:
                   url: https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
                   sha256: c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072
 
-            # 2. Build the main application
+            # 2. Build MIO Kitchen with Desktop Entry and Smart Paths
             - name: mio-kitchen
               buildsystem: simple
               build-options:
                 build-args:
                   - --share=network
                 env:
-                  # Tell pip/gcc where to find the LZO library we just compiled!
                   C_INCLUDE_PATH: /app/include
                   LIBRARY_PATH: /app/lib
               build-commands:
+                # Install Python requirements
                 - pip3 install --prefix=/app -r requirements.txt --break-system-packages
+                
+                # Copy application files
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
-                - echo '#!/bin/sh' > /app/bin/start-mio
-                - echo 'python3 /app/bin/tool.py "$@"' >> /app/bin/start-mio
+                
+                # Create .desktop file for app launcher / desktop integration
+                - mkdir -p /app/share/applications
+                - |
+                  cat << 'DESKTOP_EOF' > /app/share/applications/com.github.ColdWindScholar.MioKitchen.desktop
+                  [Desktop Entry]
+                  Type=Application
+                  Name=MIO Kitchen
+                  Comment=Android ROM Tool in Python
+                  Exec=start-mio
+                  Icon=com.github.ColdWindScholar.MioKitchen
+                  Categories=Development;Utility;
+                  Terminal=false
+                  DESKTOP_EOF
+
+                # Install App Icon
+                - mkdir -p /app/share/icons/hicolor/256x256/apps
+                - cp /app/bin/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
+
+                # Smart startup script: Launches inside ~/MIO_Workspace to ensure writable paths
+                - |
+                  cat << 'SCRIPT_EOF' > /app/bin/start-mio
+                  #!/bin/sh
+                  # Create and switch to writable workspace directory in user's home folder
+                  mkdir -p "$HOME/MIO_Workspace"
+                  cd "$HOME/MIO_Workspace"
+                  exec python3 /app/bin/tool.py "$@"
+                  SCRIPT_EOF
                 - chmod +x /app/bin/start-mio
               sources:
                 - type: dir
@@ -66,13 +94,8 @@ jobs:
 
       - name: Build and Export Flatpak
         run: |
-          # 1. Add Flathub to the USER space
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          
-          # 2. Build the Flatpak
           flatpak-builder --force-clean --user --install-deps-from=flathub --repo=repo builddir com.github.ColdWindScholar.MioKitchen.yml
-          
-          # 3. Bundle it into an installable file
           flatpak build-bundle repo mio-kitchen.flatpak com.github.ColdWindScholar.MioKitchen --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Upload Artifact
