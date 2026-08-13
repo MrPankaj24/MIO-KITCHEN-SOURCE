@@ -34,7 +34,7 @@ jobs:
           runtime: org.freedesktop.Platform
           runtime-version: '24.08'
           sdk: org.freedesktop.Sdk
-          command: start-mio
+          command: tool.py
           finish-args:
             - --share=ipc
             - --socket=fallback-x11
@@ -71,47 +71,13 @@ jobs:
                   Type=Application
                   Name=MIO Kitchen
                   Comment=Android ROM Tool in Python
-                  Exec=start-mio
+                  Exec=tool.py
                   Icon=com.github.ColdWindScholar.MioKitchen
                   Categories=Development;Utility;
                   Terminal=false
                   DESKTOP_EOF
                 - mkdir -p /app/share/icons/hicolor/256x256/apps
                 - cp /app/bin/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
-                - |
-                  cat << 'SCRIPT_EOF' > /app/bin/start-mio
-                  #!/bin/sh
-                  export PYTHONPATH=/app/lib/python3.12/site-packages
-                  export LD_LIBRARY_PATH=/app/lib
-
-                  WORKSPACE="$HOME/Desktop/MIO"
-                  mkdir -p "$WORKSPACE"
-
-                  # Sync app files to writable workspace, but preserve user configs
-                  for f in /app/bin/*; do
-                    fname=$(basename "$f")
-                    if [ "$fname" = "bin" ]; then
-                      mkdir -p "$WORKSPACE/bin"
-                      for g in /app/bin/bin/*; do
-                        gname=$(basename "$g")
-                        # Skip overwriting configs.json if it already exists
-                        if [ "$gname" = "configs.json" ]; then
-                          if [ ! -f "$WORKSPACE/bin/configs.json" ]; then
-                            cp "$g" "$WORKSPACE/bin/"
-                          fi
-                        else
-                          cp -r "$g" "$WORKSPACE/bin/"
-                        fi
-                      done
-                    else
-                      cp -r "$f" "$WORKSPACE/"
-                    fi
-                  done
-
-                  cd "$WORKSPACE"
-                  exec python3 "$WORKSPACE/tool.py" "$@"
-                  SCRIPT_EOF
-                - chmod +x /app/bin/start-mio
               sources:
                 - type: dir
                   path: .
