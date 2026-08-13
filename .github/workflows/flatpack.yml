@@ -81,16 +81,21 @@ jobs:
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
                   #!/bin/sh
-                  export PYTHONPATH=/app/lib/python3.12/site-packages
+                  # Force Python to look in Flatpak's app site-packages first
+                  export PYTHONPATH=/app/lib/python3.12/site-packages:/app/lib/python3.12/site-packages
                   export LD_LIBRARY_PATH=/app/lib
 
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
 
-                  # Copy app files into the writable workspace while preserving existing user files/configs
-                  cp -rn /app/bin/* "$WORKSPACE/" 2>/dev/null || true
+                  # Safely copy missing script files without overwriting existing workspace tools/configs
+                  for f in /app/bin/*; do
+                    fname=$(basename "$f")
+                    if [ ! -e "$WORKSPACE/$fname" ]; then
+                      cp -r "$f" "$WORKSPACE/"
+                    fi
+                  done
 
-                  # Change to the writable workspace and run tool.py locally
                   cd "$WORKSPACE"
                   exec python3 "$WORKSPACE/tool.py" "$@"
                   SCRIPT_EOF
