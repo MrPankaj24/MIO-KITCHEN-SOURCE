@@ -13,10 +13,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Flatpak Tools
+      - name: Install Flatpak Tools and Configure Flathub
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
+          # Add the Flathub repository so the builder can download the SDK
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
       - name: Generate Python Requirements
         run: |
