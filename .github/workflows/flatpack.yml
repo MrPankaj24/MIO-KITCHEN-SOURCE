@@ -37,9 +37,12 @@ jobs:
           command: start-mio
           finish-args:
             - --share=ipc
-            - --socket=fallback-x11
+            - --socket=x11
             - --socket=wayland
+            - --share=network
+            - --device=dri
             - --filesystem=host
+            - --env=DISPLAY=:0
           modules:
             - name: lzo
               buildsystem: autotools
@@ -61,18 +64,11 @@ jobs:
                   LIBRARY_PATH: /app/lib
                   LD_RUN_PATH: /app/lib
               build-commands:
-                # 1. Create a clean isolated Python Virtual Environment at /app/env
                 - python3 -m venv /app/env
-                
-                # 2. Install all requirements directly inside the venv
                 - /app/env/bin/pip install --upgrade pip
                 - /app/env/bin/pip install -r requirements.txt --break-system-packages
-                
-                # 3. Copy app source files into a shared app folder
                 - mkdir -p /app/share/mio-kitchen
                 - cp -r * /app/share/mio-kitchen/
-                
-                # 4. Create Desktop Entry configuration
                 - mkdir -p /app/share/applications
                 - |
                   cat << 'DESKTOP_EOF' > /app/share/applications/com.github.ColdWindScholar.MioKitchen.desktop
@@ -85,12 +81,8 @@ jobs:
                   Categories=Development;Utility;
                   Terminal=false
                   DESKTOP_EOF
-
-                # 5. Install App Icon
                 - mkdir -p /app/share/icons/hicolor/256x256/apps
                 - cp /app/share/mio-kitchen/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
-
-                # 6. Build the runner script using the virtual environment interpreter
                 - mkdir -p /app/bin
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
@@ -100,7 +92,6 @@ jobs:
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
 
-                  # Copy app files over if they don't exist yet in the user workspace
                   for f in /app/share/mio-kitchen/*; do
                     fname=$(basename "$f")
                     if [ ! -e "$WORKSPACE/$fname" ]; then
