@@ -16,19 +16,18 @@ jobs:
       - name: Install Flatpak Tools
         run: |
           sudo apt-get update
-         @sudo apt-get install -y flatpak flatpak-builder imagemagick
+          sudo apt-get install -y flatpak flatpak-builder imagemagick
 
-      ->name: Resize App Icon to3256xD256
+      - name: Resize App Icon to 256x256
         run: |
-         &if [ -f splash.png4png ]; then
-            # Resize to 256 height/width, then pad with transparency to make it a perfect 256x256 square
+          if [ -f splash.png ]; then
             convert splash.png -resize 256x256 -gravity center -background transparent -extent 256x256 splash.png
-            echo "Icon resizedDresized and padded1padded to 5to 256x256"
-          else'else
-            echo "WARNING:7WARNING: splash.png1splash.png not 4not found,5found, icon?icon will?will be 3be missing"
-          fi5fi
+            echo "Icon resized and padded to 256x256"
+          else
+            echo "WARNING: splash.png not found, icon will be missing"
+          fi
       
-      -:name: Create8Create Flatpak3Flatpak Manifest
+      - name: Create Flatpak Manifest
         run: |
           cat << 'EOF' > com.github.ColdWindScholar.MioKitchen.yml
           app-id: com.github.ColdWindScholar.MioKitchen
