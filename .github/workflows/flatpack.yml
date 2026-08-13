@@ -60,13 +60,19 @@ jobs:
                   C_INCLUDE_PATH: /app/include
                   LIBRARY_PATH: /app/lib
                   LD_RUN_PATH: /app/lib
-                  PYTHONPATH: /app/lib/python3.12/site-packages
               build-commands:
-                # Explicitly force install pygments alongside requirements to guarantee availability
-                - pip3 install --prefix=/app pygments pygments-lexer-solidity -r requirements.txt --break-system-packages
+                # 1. Create a clean isolated Python Virtual Environment at /app/env
+                - python3 -m venv /app/env
                 
-                - mkdir -p /app/bin
-                - cp -r * /app/bin/
+                # 2. Install all requirements directly inside the venv
+                - /app/env/bin/pip install --upgrade pip
+                - /app/env/bin/pip install -r requirements.txt --break-system-packages
+                
+                # 3. Copy app source files into a shared app folder
+                - mkdir -p /app/share/mio-kitchen
+                - cp -r * /app/share/mio-kitchen/
+                
+                # 4. Create Desktop Entry configuration
                 - mkdir -p /app/share/applications
                 - |
                   cat << 'DESKTOP_EOF' > /app/share/applications/com.github.ColdWindScholar.MioKitchen.desktop
@@ -79,22 +85,31 @@ jobs:
                   Categories=Development;Utility;
                   Terminal=false
                   DESKTOP_EOF
+
+                # 5. Install App Icon
                 - mkdir -p /app/share/icons/hicolor/256x256/apps
-                - cp /app/bin/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
+                - cp /app/share/mio-kitchen/splash.png /app/share/icons/hicolor/256x256/apps/com.github.ColdWindScholar.MioKitchen.png || true
+
+                # 6. Build the runner script using the virtual environment interpreter
+                - mkdir -p /app/bin
                 - |
                   cat << 'SCRIPT_EOF' > /app/bin/start-mio
                   #!/bin/sh
-                  export PYTHONPATH=/app/lib/python3.12/site-packages:$PYTHONPATH
-                  export LD_LIBRARY_PATH=/app/lib:$LD_LIBRARY_PATH
+                  export LD_LIBRARY_PATH=/app/lib
 
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
 
-                  # Copy app files into the writable workspace while preserving existing user files/configs
-                  cp -rn /app/bin/* "$WORKSPACE/" 2>/dev/null || true
+                  # Copy app files over if they don't exist yet in the user workspace
+                  for f in /app/share/mio-kitchen/*; do
+                    fname=$(basename "$f")
+                    if [ ! -e "$WORKSPACE/$fname" ]; then
+                      cp -r "$f" "$WORKSPACE/"
+                    fi
+                  done
 
                   cd "$WORKSPACE"
-                  exec python3 "$WORKSPACE/tool.py" "$@"
+                  exec /app/env/bin/python "$WORKSPACE/tool.py" "$@"
                   SCRIPT_EOF
                 - chmod +x /app/bin/start-mio
               sources:
