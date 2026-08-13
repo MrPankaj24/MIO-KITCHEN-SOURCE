@@ -16,7 +16,7 @@ jobs:
       - name: Install Flatpak Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder imagemagick
+          sudo apt-get install -y flatpak flatpak-builder imagemagick python3-pip
 
       - name: Resize App Icon to 256x256
         run: |
@@ -62,13 +62,9 @@ jobs:
                   LD_RUN_PATH: /app/lib
                   PYTHONPATH: /app/lib/python3.12/site-packages
               build-commands:
-                # Install directly to /app prefix so it gets packaged correctly
-                - pip3 install --prefix=/app -r requirements.txt --break-system-packages
+                # Explicitly force install pygments alongside requirements to guarantee availability
+                - pip3 install --prefix=/app pygments pygments-lexer-solidity -r requirements.txt --break-system-packages
                 
-                # Debug check: list what modules got installed
-                - python3 -c "import sys; print(sys.path)"
-                - python3 -c "import pkg_resources; print([p.project_name for p in pkg_resources.working_set])" || true
-
                 - mkdir -p /app/bin
                 - cp -r * /app/bin/
                 - mkdir -p /app/share/applications
@@ -94,12 +90,8 @@ jobs:
                   WORKSPACE="$HOME/MIO_Workspace"
                   mkdir -p "$WORKSPACE"
 
-                  for f in /app/bin/*; do
-                    fname=$(basename "$f")
-                    if [ ! -e "$WORKSPACE/$fname" ]; then
-                      cp -r "$f" "$WORKSPACE/"
-                    fi
-                  done
+                  # Copy app files into the writable workspace while preserving existing user files/configs
+                  cp -rn /app/bin/* "$WORKSPACE/" 2>/dev/null || true
 
                   cd "$WORKSPACE"
                   exec python3 "$WORKSPACE/tool.py" "$@"
